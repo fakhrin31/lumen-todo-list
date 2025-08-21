@@ -60,7 +60,9 @@ COPY --from=builder /usr/local/etc/php/conf.d /usr/local/etc/php/conf.d
 COPY --from=builder /var/www/html /var/www/html
 
 # Set permissions
-RUN chmod -R 775 storage bootstrap/cache
+# Set permissions hanya untuk storage (Lumen tidak punya bootstrap/cache)
+RUN mkdir -p storage \
+    && chmod -R 775 storage
 
 EXPOSE 8000
 
