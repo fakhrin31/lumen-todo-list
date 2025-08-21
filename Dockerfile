@@ -4,11 +4,17 @@ FROM php:8.1-fpm-alpine
 # Atur working directory di dalam container.
 WORKDIR /var/www/html
 
-# Install dependensi sistem yang diperlukan:
+# Install dependensi sistem yang diperlukan oleh PHP ekstensi:
 # - git: untuk menginstal dependensi Composer dari repositori Git
 # - postgresql-dev: untuk menginstal ekstensi PHP PostgreSQL
 # - zip dan unzip: untuk Composer
-RUN apk add --no-cache git postgresql-dev zip unzip
+# - libzip-dev: diperlukan oleh ekstensi zip
+# - libpng-dev: diperlukan untuk ekstensi gd
+# - libjpeg-turbo-dev: diperlukan untuk ekstensi gd
+# - libwebp-dev: diperlukan untuk ekstensi gd
+# - freetype-dev: diperlukan untuk ekstensi gd
+# - libxml2-dev: diperlukan untuk ekstensi xml
+RUN apk add --no-cache git postgresql-dev zip unzip libzip-dev libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev libxml2-dev
 
 # Instal ekstensi PHP yang diperlukan oleh Laravel dan PostgreSQL:
 # - pdo_pgsql: driver PDO untuk PostgreSQL
