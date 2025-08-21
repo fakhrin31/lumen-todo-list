@@ -1,25 +1,13 @@
-# Gunakan image PHP FPM berbasis Debian "Bullseye", yang lebih stabil dan terbaru.
-FROM php:8.1-fpm-bullseye
+# Stage 1: Build dependencies & Composer install
+FROM php:8.1-fpm-bullseye AS builder
 
-# Atur working directory di dalam container.
 WORKDIR /var/www/html
 
-# Install dependensi sistem yang diperlukan:
-# - git: untuk menginstal dependensi Composer
-# - libpq-dev: untuk driver PostgreSQL
-# - zip, unzip: untuk Composer
-# - libzip-dev: diperlukan oleh ekstensi zip
-# - libxml2-dev: diperlukan untuk ekstensi xml
-# - libpng-dev: diperlukan untuk ekstensi gd
-# - libjpeg62-turbo-dev: pengganti untuk libjpeg-turbo-dev di Bullseye
-# - libwebp-dev: diperlukan untuk ekstensi gd
-# - libfreetype-dev: diperlukan untuk ekstensi gd
-# - libonig-dev: diperlukan oleh ekstensi mbstring
+# Install system dependencies (hanya untuk build)
 RUN apt-get update && apt-get install -y \
     git \
-    libpq-dev \
-    zip \
     unzip \
+    libpq-dev \
     libzip-dev \
     libxml2-dev \
     libpng-dev \
@@ -29,27 +17,52 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Instal semua ekstensi PHP yang diperlukan dalam satu perintah RUN.
-RUN docker-php-ext-install pdo_pgsql pgsql \
-    && docker-php-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer xml
+# Install PHP extensions
+RUN docker-php-ext-install pdo_pgsql pgsql bcmath mbstring xml zip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install gd
 
-# Instal Composer secara global di dalam container.
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
-# Salin semua file dari proyek lokal ke working directory container.
+# Copy source code
 COPY . .
 
-# Hapus file .env karena kredensial akan disediakan oleh Render sebagai environment variables.
+# Remove local .env (Render pakai Environment Variables)
 RUN rm -f .env
 
-# Jalankan Composer untuk menginstal semua dependensi PHP.
-RUN composer install --no-dev --optimize-autoloader
+# Install PHP dependencies (hanya production)
+RUN composer install --no-dev --optimize-autoloader --no-scripts --no-progress
 
-# Izinkan web server menulis ke folder storage
-RUN chmod -R 775 storage
+---
 
-# Ekspos port 8000 yang akan digunakan oleh server PHP.
+# Stage 2: Final lightweight image
+FROM php:8.1-fpm-bullseye
+
+WORKDIR /var/www/html
+
+# Install runtime system dependencies (lebih sedikit dari builder)
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    libzip4 \
+    libxml2 \
+    libpng16-16 \
+    libjpeg62-turbo \
+    libwebp6 \
+    libfreetype6 \
+    libonig5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy PHP extensions from builder
+COPY --from=builder /usr/local/lib/php/extensions /usr/local/lib/php/extensions
+COPY --from=builder /usr/local/etc/php/conf.d /usr/local/etc/php/conf.d
+
+# Copy project files & vendor
+COPY --from=builder /var/www/html /var/www/html
+
+# Set permissions
+RUN chmod -R 775 storage bootstrap/cache
+
 EXPOSE 8000
 
-# Tentukan perintah untuk menjalankan server PHP bawaan.
 CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
