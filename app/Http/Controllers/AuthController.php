@@ -1,39 +1,52 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthController extends Controller
 {
-    /**
-     * Handle a login request to the application.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function login(Request $request)
-    {
+    public function register(Request $request) {
         $this->validate($request, [
-            'email' => 'required|email',
-            'password' => 'required',
+            'name' => 'required|string', 'email' => 'required|email|unique:users', 'password' => 'required|confirmed',
         ]);
+        $user = new User(['name' => $request->name, 'email' => $request->email, 'password' => Hash::make($request->password)]);
+        $user->save();
+        return response()->json(['message' => 'User created successfully!'], 201);
+    }
 
-        $user = User::where('email', $request->input('email'))->first();
+    public function login(Request $request) {
+        $this->validate($request, ['email' => 'required|email', 'password' => 'required|string']);
+        $credentials = $request->only(['email', 'password']);
 
-        if (!$user) {
-            return response()->json(['message' => 'Login failed'], 401);
+        try {
+            if (!$token = JWTAuth::attempt($credentials)) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
+        } catch (JWTException $e) {
+            return response()->json(['message' => 'Could not create token'], 500);
         }
 
-        if (Hash::check($request->input('password'), $user->password)) {
-            $user->api_token = Str::random(60);
-            $user->save();
-            return response()->json(['api_token' => $user->api_token]);
-        }
+        return $this->respondWithToken($token);
+    }
 
-        return response()->json(['message' => 'Login failed'], 401);
+    public function me() {
+        return response()->json(JWTAuth::parseToken()->authenticate());
+    }
+
+    public function logout() {
+        JWTAuth::invalidate(JWTAuth::getToken());
+        return response()->json(['message' => 'Successfully logged out']);
+    }
+
+    protected function respondWithToken($token) {
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => JWTAuth::factory()->getTTL() * 60
+        ]);
     }
 }
