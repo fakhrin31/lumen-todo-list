@@ -1,33 +1,43 @@
-# Gunakan image PHP dengan ekstensi yang diperlukan
-FROM php:8.1-apache
+# Gunakan image PHP FPM dengan Alpine sebagai base, yang ringan dan cepat.
+FROM php:8.1-fpm-alpine
 
-# Install ekstensi PHP yang sering dipakai Laravel/Lumen
-RUN apt-get update && apt-get install -y \
-    git unzip libpq-dev libonig-dev libzip-dev zip \
-    && docker-php-ext-install pdo pdo_mysql mbstring zip
-
-# Enable Apache rewrite (wajib untuk Laravel/Lumen route)
-RUN a2enmod rewrite
-
-# Copy project ke container
+# Atur working directory di dalam container.
 WORKDIR /var/www/html
+
+# Install dependensi sistem yang diperlukan:
+# - git: untuk menginstal dependensi Composer dari repositori Git
+# - postgresql-dev: untuk menginstal ekstensi PHP PostgreSQL
+# - zip dan unzip: untuk Composer
+RUN apk add --no-cache git postgresql-dev zip unzip
+
+# Instal ekstensi PHP yang diperlukan oleh Laravel dan PostgreSQL:
+# - pdo_pgsql: driver PDO untuk PostgreSQL
+# - pgsql: ekstensi PHP untuk PostgreSQL
+# - bcmath, ctype, fileinfo, json, mbstring, openssl, tokenizer, xml: ekstensi standar Laravel
+RUN docker-php-ext-install pdo_pgsql pgsql \
+    && docker-php-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer xml
+
+# Instal Composer secara global di dalam container.
+COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
+
+# Salin semua file dari proyek lokal ke working directory container.
 COPY . .
 
-# Install Composer
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+# Hapus file .env karena kredensial akan disediakan oleh Render sebagai environment variables.
+RUN rm -f .env
 
-# Install dependencies
-RUN composer install --optimize-autoloader --no-dev
+# Jalankan Composer untuk menginstal semua dependensi PHP.
+# --no-dev: untuk skip dependensi pengembangan
+# --optimize-autoloader: untuk optimasi autoloader di lingkungan produksi
+RUN composer install --no-dev --optimize-autoloader
 
-# Set permission untuk storage & bootstrap/cache
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Izinkan web server menulis ke folder storage
+RUN chmod -R 775 storage
 
-# Apache document root diarahkan ke folder public
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+# Ekspos port 8000 yang akan digunakan oleh server PHP.
+EXPOSE 8000
 
-# Expose port 80
-EXPOSE 80
-
-CMD ["apache2-foreground"]
+# Tentukan perintah untuk menjalankan server PHP bawaan.
+# -t public: menggunakan folder 'public' sebagai root dokumen
+# 0.0.0.0:$PORT: membuat server dapat diakses secara eksternal melalui port yang diberikan oleh Render
+CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
