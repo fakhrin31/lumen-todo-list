@@ -1,31 +1,25 @@
-# Gunakan image PHP FPM dengan Alpine sebagai base, yang ringan dan cepat.
-FROM php:8.1-fpm-alpine
+# Gunakan image PHP FPM berbasis Debian "Buster", yang lebih stabil.
+FROM php:8.1-fpm-buster
 
 # Atur working directory di dalam container.
 WORKDIR /var/www/html
 
-# Install dependensi sistem yang diperlukan oleh PHP ekstensi:
-# - git: untuk menginstal dependensi Composer dari repositori Git
-# - postgresql-dev: untuk menginstal ekstensi PHP PostgreSQL
-# - zip dan unzip: untuk Composer
+# Install dependensi sistem yang diperlukan:
+# - git: untuk menginstal dependensi Composer
+# - libpq-dev: untuk driver PostgreSQL
+# - zip, unzip: untuk Composer
 # - libzip-dev: diperlukan oleh ekstensi zip
-# - libpng-dev: diperlukan untuk ekstensi gd
-# - libjpeg-turbo-dev: diperlukan untuk ekstensi gd
-# - libwebp-dev: diperlukan untuk ekstensi gd
-# - freetype-dev: diperlukan untuk ekstensi gd
-# - libxml2-dev: diperlukan untuk ekstensi xml
-RUN apk add --no-cache git postgresql-dev zip unzip libzip-dev libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev libxml2-dev
+RUN apt-get update && apt-get install -y \
+    git \
+    libpq-dev \
+    zip \
+    unzip \
+    libzip-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instal ekstensi PHP yang diperlukan oleh Laravel dan PostgreSQL:
-# - pdo_pgsql: driver PDO untuk PostgreSQL
-# - pgsql: ekstensi PHP untuk PostgreSQL
-RUN docker-php-ext-install pdo_pgsql pgsql
-
-# Instal ekstensi yang paling umum secara terpisah
-RUN docker-php-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer
-
-# Instal ekstensi xml secara terpisah
-RUN docker-php-ext-install xml
+# Instal semua ekstensi PHP yang diperlukan oleh Laravel dan PostgreSQL.
+RUN docker-php-ext-install pdo_pgsql pgsql \
+    && docker-php-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer xml
 
 # Instal Composer secara global di dalam container.
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
@@ -37,8 +31,6 @@ COPY . .
 RUN rm -f .env
 
 # Jalankan Composer untuk menginstal semua dependensi PHP.
-# --no-dev: untuk skip dependensi pengembangan
-# --optimize-autoloader: untuk optimasi autoloader di lingkungan produksi
 RUN composer install --no-dev --optimize-autoloader
 
 # Izinkan web server menulis ke folder storage
@@ -48,6 +40,4 @@ RUN chmod -R 775 storage
 EXPOSE 8000
 
 # Tentukan perintah untuk menjalankan server PHP bawaan.
-# -t public: menggunakan folder 'public' sebagai root dokumen
-# 0.0.0.0:$PORT: membuat server dapat diakses secara eksternal melalui port yang diberikan oleh Render
 CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
