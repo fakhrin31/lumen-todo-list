@@ -34,7 +34,6 @@ RUN rm -f .env
 # Install PHP dependencies (hanya production)
 RUN composer install --no-dev --optimize-autoloader --no-scripts --no-progress
 
----
 
 # Stage 2: Final lightweight image
 FROM php:8.1-fpm-bullseye
