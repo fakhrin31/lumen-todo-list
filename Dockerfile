@@ -21,9 +21,12 @@ RUN apk add --no-cache git postgresql-dev zip unzip libzip-dev libpng-dev libjpe
 # - pgsql: ekstensi PHP untuk PostgreSQL
 RUN docker-php-ext-install pdo_pgsql pgsql
 
-# Instal ekstensi standar Laravel
-# - bcmath, ctype, fileinfo, json, mbstring, openssl, tokenizer, xml
-RUN docker-php-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer xml
+# Instal ekstensi standar Laravel, kecuali xml
+# - bcmath, ctype, fileinfo, json, mbstring, openssl, tokenizer
+RUN docker-php-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer
+
+# Instal ekstensi xml secara terpisah
+RUN docker-php-ext-install xml
 
 # Instal Composer secara global di dalam container.
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
