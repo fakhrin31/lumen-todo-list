@@ -1,34 +1,39 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    public function register(Request $request) {
+    /**
+     * Handle a login request to the application.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function login(Request $request)
+    {
         $this->validate($request, [
-            'name' => 'required|string', 'email' => 'required|email|unique:users', 'password' => 'required|confirmed',
+            'email' => 'required|email',
+            'password' => 'required',
         ]);
-        $user = new User(['name' => $request->name, 'email' => $request->email, 'password' => Hash::make($request->password)]);
-        $user->save();
-        return response()->json(['message' => 'User created successfully!'], 201);
-    }
 
-    public function login(Request $request) {
-        $this->validate($request, ['email' => 'required|email', 'password' => 'required|string']);
-        $credentials = $request->only(['email', 'password']);
-        if (!$token = Auth::attempt($credentials)) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+        $user = User::where('email', $request->input('email'))->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Login failed'], 401);
         }
-        return $this->respondWithToken($token);
-    }
 
-    public function me() { return response()->json(Auth::user()); }
-    public function logout() { Auth::logout(); return response()->json(['message' => 'Successfully logged out']); }
-    protected function respondWithToken($token) {
-        return response()->json(['access_token' => $token, 'token_type' => 'bearer', 'expires_in' => Auth::factory()->getTTL() * 60]);
+        if (Hash::check($request->input('password'), $user->password)) {
+            $user->api_token = Str::random(60);
+            $user->save();
+            return response()->json(['api_token' => $user->api_token]);
+        }
+
+        return response()->json(['message' => 'Login failed'], 401);
     }
 }
