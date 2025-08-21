@@ -29,32 +29,9 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Instal ekstensi PHP yang diperlukan oleh Laravel dan PostgreSQL.
-RUN docker-php-ext-install pdo_pgsql pgsql
-
-# Instal ekstensi bcmath
-RUN docker-php-ext-install bcmath
-
-# Instal ekstensi ctype
-RUN docker-php-ext-install ctype
-
-# Instal ekstensi fileinfo
-RUN docker-php-ext-install fileinfo
-
-# Instal ekstensi json
-RUN docker-php-ext-install json
-
-# Instal ekstensi mbstring
-RUN docker-php-ext-install mbstring
-
-# Instal ekstensi openssl
-RUN docker-php-ext-install openssl
-
-# Instal ekstensi tokenizer
-RUN docker-php-ext-install tokenizer
-
-# Instal ekstensi xml
-RUN docker-php-ext-install xml
+# Instal semua ekstensi PHP yang diperlukan dalam satu perintah RUN.
+RUN docker-php-ext-install pdo_pgsql pgsql \
+    && docker-php-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer xml
 
 # Instal Composer secara global di dalam container.
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
