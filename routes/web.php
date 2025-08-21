@@ -9,14 +9,14 @@ $router->group(['prefix' => 'auth'], function () use ($router) {
     $router->post('login', 'AuthController@login');
     
     // Rute yang butuh login
-    $router->group(['middleware' => 'auth'], function () use ($router) {
+    $router->group(['middleware' => 'auth:api'], function () use ($router) {
         $router->post('logout', 'AuthController@logout');
         $router->get('me', 'AuthController@me');
     });
 });
 
 // Rute untuk To-Do List (semua butuh login)
-$router->group(['prefix' => 'api', 'middleware' => 'auth'], function () use ($router) {
+$router->group(['prefix' => 'api', 'middleware' => 'auth:api'], function () use ($router) {
     $router->get('todos', 'TodoController@index');
     $router->post('todos', 'TodoController@store');
     $router->get('todos/{id}', 'TodoController@show');
