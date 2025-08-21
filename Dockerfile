@@ -11,9 +11,9 @@ WORKDIR /var/www/html
 # - libzip-dev: diperlukan oleh ekstensi zip
 # - libxml2-dev: diperlukan untuk ekstensi xml
 # - libpng-dev: diperlukan untuk ekstensi gd
-# - libjpeg-turbo-dev: diperlukan untuk ekstensi gd
+# - libjpeg62-turbo-dev: pengganti untuk libjpeg-turbo-dev di Bullseye
 # - libwebp-dev: diperlukan untuk ekstensi gd
-# - freetype-dev: diperlukan untuk ekstensi gd
+# - libfreetype-dev: diperlukan untuk ekstensi gd
 # - libonig-dev: diperlukan oleh ekstensi mbstring
 RUN apt-get update && apt-get install -y \
     git \
@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libxml2-dev \
     libpng-dev \
-    libjpeg-turbo-dev \
+    libjpeg62-turbo-dev \
     libwebp-dev \
     libfreetype-dev \
     libonig-dev \
@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y \
 
 # Instal semua ekstensi PHP yang diperlukan oleh Laravel dan PostgreSQL.
 RUN docker-php-ext-install pdo_pgsql pgsql \
-    && docker-php-ext-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer xml
+    && docker-php-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer xml
 
 # Instal Composer secara global di dalam container.
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
