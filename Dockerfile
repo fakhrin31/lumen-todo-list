@@ -9,17 +9,29 @@ WORKDIR /var/www/html
 # - libpq-dev: untuk driver PostgreSQL
 # - zip, unzip: untuk Composer
 # - libzip-dev: diperlukan oleh ekstensi zip
+# - libxml2-dev: diperlukan untuk ekstensi xml
+# - libpng-dev: diperlukan untuk ekstensi gd
+# - libjpeg-turbo-dev: diperlukan untuk ekstensi gd
+# - libwebp-dev: diperlukan untuk ekstensi gd
+# - freetype-dev: diperlukan untuk ekstensi gd
+# - libonig-dev: diperlukan oleh ekstensi mbstring
 RUN apt-get update && apt-get install -y \
     git \
     libpq-dev \
     zip \
     unzip \
     libzip-dev \
+    libxml2-dev \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    libwebp-dev \
+    libfreetype-dev \
+    libonig-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Instal semua ekstensi PHP yang diperlukan oleh Laravel dan PostgreSQL.
 RUN docker-php-ext-install pdo_pgsql pgsql \
-    && docker-php-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer xml
+    && docker-php-ext-ext-install bcmath ctype fileinfo json mbstring openssl tokenizer xml
 
 # Instal Composer secara global di dalam container.
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
