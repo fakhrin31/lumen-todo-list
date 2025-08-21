@@ -1,5 +1,5 @@
-# Gunakan image PHP FPM berbasis Debian "Buster", yang lebih stabil.
-FROM php:8.1-fpm-buster
+# Gunakan image PHP FPM berbasis Debian "Bullseye", yang lebih stabil dan terbaru.
+FROM php:8.1-fpm-bullseye
 
 # Atur working directory di dalam container.
 WORKDIR /var/www/html
